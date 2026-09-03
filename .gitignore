@@ -1,0 +1,62 @@
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Python Bytecode & Runtime Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Ruff Linter Cache
+.ruff_cache/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Type Checking (Mypy)
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Environment Variables & Local Configs (Secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE & Editor Files
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Database & Storage (Local SQLite / Logs)
+*.sqlite3
+*.db
+*.log
+logs/
+
+# Alembic Migration Cache (Keep migration versions, ignore temp files)
+alembic/versions/__pycache__/
