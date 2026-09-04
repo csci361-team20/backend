@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16
+    container_name: biletflow_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: biletflow
+      POSTGRES_PASSWORD: biletflowpassword
+      POSTGRES_DB: biletflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biletflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: biletflow_backend
+    restart: unless-stopped
+    command: /app/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+      - /app/.venv
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://biletflow:biletflowpassword@db:5432/biletflow
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
