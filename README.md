@@ -6,7 +6,9 @@ This repo is the backend service only. Frontend and mobile live in separate repo
 
 For domain model, roles/permissions, entities, and the ERD, see `docs/ARCHITECTURE.md`. For naming/style/branching rules, see `docs/CONVENTIONS.md`.
 
-## Tech Stack
+***For namings, code-writing practices, commits, PRs you must check CONVENTIONS.md.***
+
+# Tech Stack
 
 | Layer | Choice |
 |---|---|
@@ -17,152 +19,177 @@ For domain model, roles/permissions, entities, and the ERD, see `docs/ARCHITECTU
 | Tests | Pytest |
 | Local infra | Docker Compose |
 
-## Contributing
+**How it runs:** both the database and the API live in Docker (`db` + `backend` services). Your code folder is mounted straight into the `backend` container, and it starts with `--reload`, so editing a file on your machine reloads the running server automatically — no rebuild needed for code changes.
 
-### 1. First-time setup
-Clone project.
+# First-Time Setup
+
+1. **Prerequisites** — install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (must be running whenever you work) and [uv](https://docs.astral.sh/uv/) (used for linting/tests on your machine).
+
+2. **Clone & open**
+   ```bash
+   git clone https://github.com/team22-csci361/backend.git
+   cd backend
+   code .
+   ```
+
+3. **Env file**
+   ```bash
+   cp .env.example .env
+   ```
+
+4. **Install local dependencies** (for Ruff/Pytest/editor autocomplete — separate from the container's own copy)
+   ```bash
+   uv sync
+   ```
+
+5. **Build the images and start everything**
+   ```bash
+   docker compose up --build
+
+   # Or if you want to run it in background
+   docker compose up -d --build
+   ```
+   This builds the `backend` image (installs Python deps *into* it) and starts both `db` and `backend`.
+
+6. **Build the database tables**
+   ```bash
+   # This must be run while Docker is working, so to do that - add another terminal and run it there
+   docker compose exec backend alembic upgrade head
+   ```
+
+✅ Done. Both containers are running, tables exist, dependencies are installed both locally and in the image. You're ready to code.
+
+# Daily Workflow
+
+### 1. Start a branch
 ```bash
-git clone https://github.com/team22-csci361/backend.git
+git checkout main
+git pull origin main
+git checkout -b <your-branch>
 ```
 
-Go to project folder and create `.env` based on `.env.example`
-```bash
-cd backend
-cp .env.example .env
-```
-
-For local Docker, the defaults in `.env.example` already work — they point at the `db` service name used by `docker-compose.yml`.
-
-```bash
-docker compose up --build
-```
-
-This starts:
-- `db` — PostgreSQL 16 on `localhost:5432`
-- `backend` — FastAPI on `localhost:8000`, hot-reload enabled
-
-Check it worked: open `http://localhost:8000/docs` — you should see the Swagger UI.
-
-**After this you can start app just using:**
+### 2. Run the app
 ```bash
 docker compose up
+
+# Or if you want to run it in background
+docker compose up -d
 ```
+Starts `db` and `backend` (backend waits until the db is healthy). That's it — one command.
 
-Apply migrations:
+Swagger docs: `http://localhost:8000/docs`
 
-```bash
-docker compose exec backend uv run alembic upgrade head
-```
+- **Editing Python code?** **Just save** — `--reload` inside the container picks it up instantly. No restart, no rebuild.
+- **Added/changed a dependency** in `pyproject.toml`/`uv.lock`, or edited the `Dockerfile`? Rebuild the image:
+  ```bash
+  docker compose up --build
+  
+  # Or if you want to run it in background
+  docker compose up -d --build
+  ```
+- **Check logs:**
+  ```bash
+  docker compose logs -f backend
+  ```
+- **Stop everything:**
+  ```bash
+  docker compose down
+  ```
+  *Or you can press* `control C` *shortcut to terminate all processes in terminal.*
 
-If you want to run things (tests, lint, an IDE's language server) outside Docker too:
+### 3. Made changes to a model or schema?
+**If your change is plain code (no DB), skip this step.**
 
-```bash
-uv sync
-```
+If your change touches `app/models/` or a module's `models.py`:
 
-This creates a local `.venv/` from the same lockfile the container uses, so versions match.
-
-### 2. Day-to-day workflow
-
-1. Pull latest `main`, branch off it: `git checkout -b feat/whatever`.
-2. Make changes. `docker compose up` hot-reloads on file changes — no restart needed.
-3. Run lint + tests locally before pushing (see §5).
+1. Edit/add the SQLAlchemy model inside its module (e.g. `app/modules/tickets/models.py`).
+2. Import it in `app/models/__init__.py` — Alembic can't autogenerate a table it doesn't see.
+3. Generate the migration (this adds model into access scope so Alembic can detect it):
    ```bash
-   ruff format .
+   docker compose exec backend alembic revision --autogenerate -m "add ticket status column"
    ```
-4. Push, open a PR against `main` with a description of what/why/how to verify.
-5. Get at least one review, address comments, merge (squash) once CI passes.
-6. Delete the branch after merge.
-
-### 3. Adding a model / migration
-
-1. Add the model file under `app/models/your_model.py`, inheriting `Base` (and `TimestampMixin` if it needs `created_at`/`updated_at`).
-2. Import it in `app/models/__init__.py` — easy to forget, and if you skip it Alembic's autogenerate silently won't see the new table.
-3. Generate the migration:
+4. Apply it (this builds/updates the table with new changes):
    ```bash
-   docker compose exec backend uv run alembic revision --autogenerate -m "add your_model table"
+   docker compose exec backend alembic upgrade head
    ```
-4. Open the generated file in `alembic/versions/` and read it. Autogenerate is a diffing tool, not magic — it can miss things (a renamed column looks like a drop + add) or pick up unrelated changes. Fix by hand if needed.
-5. Apply it locally to confirm it runs cleanly:
-   ```bash
-   docker compose exec backend uv run alembic upgrade head
-   ```
-6. Commit the migration file together with the model change, in the same PR.
 
-### 4. Adding an endpoint
+**You must run both of these commands while Docker is working; to do that — add another terminal and run it.**
 
-Rough shape for a new resource:
-
-1. `app/schemas/your_resource.py` — Pydantic request/response models.
-2. `app/services/your_resource.py` — business logic; takes/returns domain objects, raises domain exceptions (not `HTTPException`).
-3. `app/api/v1/endpoints/your_resource.py` — thin router: validate input via the schema, call the service, return the response, translate domain exceptions into the right `HTTPException`.
-4. Register the router in `app/api/v1/router.py`.
-5. Add tests under `tests/`.
-
-### 5. Tests & lint
-
+### 4. Quality checks (always, before committing)
+These run locally against your `.venv` from `uv sync` — no Docker needed, much faster:
 ```bash
-uv run pytest          # tests
-uv run ruff check .    # lint
-uv run ruff format .   # auto-format
+uv run ruff format .         # auto-format
+uv run ruff check . --fix    # lint + auto-fix
+uv run ruff check .          # must report "All checks passed!"
+uv run pytest                # tests must pass
 ```
 
-Or inside the running container:
-
+### 5. Commit
 ```bash
-docker compose exec backend uv run pytest
-docker compose exec backend uv run ruff check .
+git add .
+git commit -m "feat(tickets): add seat-hold expiry logic"
 ```
 
-CI runs both on every PR — a red check means don't merge yet.
-
-### 6. Environment variables
-
-All configuration goes through `app/core/config.py` (`Settings`), backed by `.env`. When adding a new setting:
-
-1. Add the field to `Settings` in `config.py`.
-2. Add it (with a safe placeholder/default) to `.env.example` so teammates know it exists.
-3. Never commit your actual `.env` — it's gitignored on purpose.
-
-If `docker compose up` fails with a Pydantic validation error, it's almost always a missing required field in your local `.env` — check `.env.example` for what's new.
-
-## Project Structure
-
+### 6. Push & open a PR
+```bash
+git push origin <your-branch>
 ```
+Open a PR into `main` with a clear description, and wait for CI to pass before merging.
+
+# Project Structure
+
+This backend follows a **Modular Monolith** architecture. Instead of splitting code by technical layers (e.g., all models in one folder, all routes in another), everything belonging to a specific business feature lives together inside `app/modules/<domain>/`.
+
+```text
 backend/
-├── alembic/                   # DB migrations
-│   ├── env.py                 # wires Alembic to app.core.config + app.models.Base
-│   └── versions/               # one file per migration, autogenerated + reviewed
+├── alembic/                  # Database migration scripts & env configuration
+│   └── versions/             # Auto-generated SQL migration files
 ├── app/
-│   ├── main.py                 # FastAPI() instance, mounts routers, startup/shutdown hooks
-│   ├── core/
-│   │   ├── config.py            # Settings (pydantic-settings) — all env vars, single source
-│   │   ├── database.py          # async engine + session factory, get_db() dependency
-│   │   ├── security.py          # password hashing, JWT encode/decode
-│   │   └── deps.py              # get_current_user, require_event_role, etc.
-│   ├── models/                  # SQLAlchemy ORM models, one file per domain
-│   │   └── base.py               # shared DeclarativeBase + common mixins (timestamps, uuid pk)
-│   ├── schemas/                  # Pydantic request/response models, mirrors models/ 1:1
 │   ├── api/
 │   │   └── v1/
-│   │       ├── router.py          # aggregates all endpoint routers under /api/v1
-│   │       └── endpoints/         # one file per resource: auth.py, events.py, orders.py, ...
-│   ├── services/                  # business logic, called by endpoints
-│   ├── crud/                      # DB access functions (repository-style), called by services
-│   └── workers/                   # background jobs: seat-hold expiry, email send, QR/PDF gen
-├── tests/
-├── docker-compose.yml            # postgres + backend for local dev
-├── Dockerfile
-├── pyproject.toml
-└── .env.example
+│   │       └── router.py     # Master aggregator: mounts all module routers under /api/v1
+│   ├── core/                 # Shared cross-cutting concerns (Global)
+│   │   ├── config.py         # App settings & environment variable loader
+│   │   └── database.py       # Async SQLAlchemy engine, session maker, & Base model
+│   ├── models/
+│   │   └── __init__.py       # Re-exports all domain models so Alembic can discover them
+│   ├── modules/              # 📦 DOMAIN MODULES (Core Business Logic)
+│   │   ├── tickets/          # Tickets domain (models, schemas, service, router)
+│   │   └── users/            # Users domain
+│   │       ├── models.py     # SQLAlchemy ORM database models
+│   │       ├── schemas.py    # Pydantic request & response validation schemas
+│   │       ├── service.py    # Business logic & database query operations
+│   │       └── router.py     # FastAPI endpoint definitions (/users/...)
+│   └── main.py               # Application entrypoint (instantiates FastAPI & middleware)
+├── docs/                     # Architecture decisions & coding conventions
+├── tests/                    # Pytest suite
+├── docker-compose.yml        # Local development environment (DB + API)
+├── Dockerfile                # Container build instructions
+├── pyproject.toml            # Project dependencies & tool configurations
+└── uv.lock                   # Deterministic lockfile for dependencies
 ```
 
-### What goes where
-
-- **`app/models/`** — SQLAlchemy tables. Every model must be imported in `app/models/__init__.py`, or Alembic's autogenerate won't see it.
-- **`app/schemas/`** — Pydantic models for request/response validation. One file per resource, mirroring `models/`.
-- **`app/api/v1/endpoints/`** — thin HTTP layer only. An endpoint's job is: validate input via the schema, call a service function, return the response, translate domain exceptions into `HTTPException`. No business logic here.
-- **`app/services/`** — the actual business logic (seat locking, discount math, permission checks). Kept separate from endpoints so it's unit-testable without spinning up HTTP, and so two people can work on different domains without touching the same file.
-- **`app/crud/`** — raw DB access, called by services. Keeps SQLAlchemy queries out of business logic.
-- **`app/workers/`** — background jobs that don't run inline with a request (seat-hold expiry, emails, QR/PDF generation).
-- **`app/core/`** — cross-cutting concerns: config, DB session, auth/security, shared dependencies.
+### What lives where
+ 
+- **`app/modules/<domain>/`** — the actual product features. Each domain is self-contained: everything about `users` (its table, its validation, its logic, its endpoints) lives in one folder. This means you can work on `tickets` without ever opening a `users` file, and merge conflicts between teammates stay rare.
+- **`app/api/v1/router.py`** — doesn't contain any logic itself. It just imports each module's `router.py` and mounts it under `/api/v1`, so all endpoints are reachable from one place.
+- **`app/core/`** — things every module depends on: DB connection, settings, (later) auth. If two+ modules would need the same helper, it belongs here, not duplicated inside a module.
+- **`app/models/__init__.py`** — a registry, not real code. Alembic scans this file to know which tables exist, so any model you write must be imported here or migrations silently ignore it.
+- **`app/main.py`** — where the FastAPI app object is created and the v1 router gets attached. You'll rarely touch this after initial setup.
+### Anatomy of a module
+ 
+A full module (see `users/` above) has four files, and a request flows through them top to bottom:
+ 
+1. **`router.py`** — defines the HTTP endpoint (`@router.get("/users/{id}")`). Only responsible for: read the request, call `service.py`, return the response. No business logic here.
+2. **`schemas.py`** — Pydantic models describing what a valid request/response looks like (e.g. `UserCreate`, `UserOut`). FastAPI uses these to validate input and shape output automatically.
+3. **`service.py`** — the actual business logic and DB queries (e.g. "check if email is taken, then insert user"). This is what `router.py` calls into.
+4. **`models.py`** — the SQLAlchemy table definition for this domain (e.g. the `User` table).
+Keeping these separate means `service.py` can be unit-tested without spinning up HTTP, and the endpoint stays a thin, readable layer.
+ 
+### Adding a new feature
+ 
+- **New endpoint on an existing domain** (e.g. `GET /users/{id}/orders`): add it to that module's `router.py`, add any request/response shape to its `schemas.py`, and put the logic in its `service.py`.
+- **New domain entirely** (e.g. `payments`): create `app/modules/payments/` with `router.py`, `schemas.py`, `service.py`, and `models.py` following the `users/` layout, then:
+  1. Import its models in `app/models/__init__.py` so Alembic can see them.
+  2. Import and mount its router in `app/api/v1/router.py`.
+  3. Generate + apply the migration (see the "Made changes to a model or schema?" step in Daily Workflow).
