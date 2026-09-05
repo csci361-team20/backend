@@ -1,3 +1,5 @@
-from app.models.base import Base
+from app.core.database import Base
 
-__all__ = ["Base"]
+__all__ = [
+    "Base",
+]
