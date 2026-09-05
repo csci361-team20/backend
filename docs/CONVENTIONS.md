@@ -1,61 +1,96 @@
-<h1 align="center">Architecture</h1>
+# 📜 Conventions
 
-Naming, style, commit, and branching rules for this repo. Ruff enforces formatting — this covers what it doesn't.
+Naming, style, git branching, and commit conventions for the BiletFlow backend. Ruff enforces code formatting automatically — this guide covers structure, naming, and workflow rules.
 
-## Naming
 
-### Python
 
-- `snake_case` for variables, functions, modules.
-- `PascalCase` for classes (SQLAlchemy models, Pydantic schemas, custom exceptions).
-- `UPPER_SNAKE_CASE` for constants.
-- Leading underscore (`_helper`, `_validate_seat`) for functions/methods private to a module or class — not imported elsewhere, not part of the public API of that file.
-- Double leading underscore only for actual name-mangled internals (rare — avoid unless you specifically need it).
-- Boolean names read as a question: `is_active`, `has_paid`, `can_edit`, not `active_flag`.
-- Functions are verbs (`create_order`, `get_user_by_id`), not nouns.
+# ✳️ Naming Conventions
 
-### Files
+### Python Code
+- `snake_case`: Variables, functions, methods, file names, and directory names.
+- `PascalCase`: Classes (SQLAlchemy models, Pydantic schemas, custom exceptions).
+- `UPPER_SNAKE_CASE`: Constants (`MAX_SEAT_HOLD_MINUTES = 15`).
+- **Private functions/methods:** Use a single leading underscore (`_validate_capacity`, `_hash_password`) for functions internal to a module that should not be imported elsewhere.
+- **Booleans:** Name boolean variables as predicate questions: `is_active`, `has_paid`, `can_edit` (never `active_flag` or `status`).
+- **Functions:** Always start with an active verb: `create_user()`, `get_event_by_id()`, `cancel_order()`.
 
-- One model per file in `app/models/`, named after the entity in `snake_case` (`order_item.py` for `OrderItem`).
-- Schema files mirror model files by name: `app/schemas/order_item.py`.
-- Endpoint files are named after the resource, plural: `app/api/v1/endpoints/orders.py`.
+### Database Schema
+- **Table names:** Plural `snake_case` (`users`, `tickets`, `order_items`).
+- **Column names:** Singular `snake_case` without type prefixes (`price_kzt`, not `int_price`).
+- **Foreign Keys:** `<singular_target_table>_id` (`user_id`, `event_id`).
+- **Booleans:** Same question-form as Python (`is_active`, `is_verified`).
 
-### Database
+### Pydantic Schemas (`app/modules/<feature>/schemas.py`)
+Schemas use explicit action suffixes to differentiate request/response data:
 
-- Table names: plural, `snake_case` (`order_items`, `staff_assignments`).
-- Column names: `snake_case`, no type prefixes (`price_kzt`, not `intPriceKzt`).
-- FK columns: `<singular_table>_id` (`event_id`, `order_id`).
-- Boolean columns: same question-form as Python (`is_hidden`, `is_active`).
+| Purpose | Suffix Pattern | Example | Description |
+| :--- | :--- | :--- | :--- |
+| **Input (POST)** | `Create` | `UserCreate` | Strict payload for resource creation. |
+| **Input (PATCH/PUT)** | `Update` | `UserUpdate` | Payload for updates (all fields optional). |
+| **Output (HTTP Response)** | `Response` | `UserResponse` | Public response returned to clients. |
+| **Internal / DB** | `InDB` / `Internal` | `UserInDB` | Service-layer data including sensitive attributes (e.g., `hashed_password`). |
+| **Query Params** | `Filter` / `Params` | `UserFilter` | Validates search, sorting, and pagination URL parameters. |
 
-### Pydantic schemas
+> 📌 **Rule:** Never reuse a single schema for both input and output if sensitive, system-generated (`id`, `created_at`), or internal fields differ.
 
-- Suffix by purpose: `OrderCreate` (input), `OrderRead` (output), `OrderUpdate` (partial input). Don't reuse one schema for both request and response if the fields differ.
 
-## Commit messages
 
-Conventional commits, lowercase, imperative mood:
+# ✳️ Git Branching Convention
 
-```
-feat: add seat hold expiry worker
-fix: prevent double refund on cancelled order
-refactor: move discount calc into promotions service
-docs: update architecture ERD
-chore: bump ruff version
-```
+All branch names must follow the format: **`type/short-description`** (lowercase, hyphen-separated).
 
-One logical change per commit. Don't bundle unrelated fixes into a feature commit.
+### Branch Types
 
-## Branching
+| Type | When to Use | Example |
+| :--- | :--- | :--- |
+| `feat` | A new feature or user story | `feat/users-auth-login` |
+| `fix` | A bug fix | `fix/jwt-expiration-check` |
+| `refactor` | Code restructuring without feature/bug changes | `refactor/modular-router-wiring` |
+| `docs` | Documentation updates | `docs/update-conventions` |
+| `chore` | Maintenance, dependencies, tool setup | `chore/update-ruff-config` |
+| `test` | Adding or updating tests | `test/user-service-unit-tests` |
 
-- `main` is always deployable.
-- Branch names: `feat/short-description`, `fix/short-description`, `chore/short-description`.
-- Branch off latest `main`, rebase (don't merge `main` into your branch) before opening a PR if it's gone stale.
-- Squash-merge PRs — commit history on `main` stays one entry per PR.
-- Delete the branch after merge.
+### Branching Rules
+1. Branch off the latest `main`.
+2. Keep branches small and feature-focused.
+3. Rebase onto `main` before opening a Pull Request if `main` has moved ahead.
+4. Always squash-merge PRs to keep `main` history clean (1 commit per merged PR).
+5. Delete feature branches immediately after merging.
 
-## Code style beyond Ruff
 
-- No business logic in `app/api/v1/endpoints/` — see README's project structure section for the layering rule.
-- Raise domain exceptions in `services/`, not `HTTPException` — translate to HTTP status only in the endpoint layer.
-- Type-hint everything; no bare `Any` unless genuinely dynamic.
-- Prefer explicit imports (`from app.models.order import Order`) over wildcard imports.
+
+# ✳️ Commit Message Convention
+
+Commits must follow the **Conventional Commits** specification in the format:
+
+$$\text{type}(\text{scope}):\text{ change-description}$$
+
+- **Format:** Lowercase, imperative mood ("add", not "added" or "adds").
+- **Scope:** The module or component being modified (`users`, `tickets`, `core`, `deps`, `readme`).
+
+### Supported Commit Types
+
+| Type | Description | Example |
+| :--- | :--- | :--- |
+| `feat` | A new business feature | `feat(users): implement user registration service` |
+| `fix` | A bug fix | `fix(auth): fix password verification hash mismatch` |
+| `refactor` | Code change that neither fixes a bug nor adds a feature | `refactor(tickets): extract seat locking logic into service` |
+| `docs` | Documentation changes only | `docs(readme): update project structure and setup steps` |
+| `chore` | Maintenance, config updates, dependency bumps | `chore(deps): update uv.lock dependencies` |
+| `test` | Adding missing tests or refactoring existing tests | `test(users): add unit tests for user creation service` |
+| `ci` | Continuous integration pipeline changes | `ci(github): add ruff and pytest workflows` |
+| `perf` | Performance improvements | `perf(database): add index for event search by date` |
+
+
+
+
+# ✳️ Architecture & Code Style Rules
+
+1. **Modular Monolith Layering:**
+   - **`router.py`**: Thin HTTP layer. Validates requests via schemas, calls services, and returns responses. No SQL or business logic here.
+   - **`service.py`**: Core business logic and database access.
+   - **`models.py`**: Database table schemas using SQLAlchemy ORM.
+   - **`schemas.py`**: Pydantic models for serialization and validation.
+2. **Error Handling:** Raise domain exceptions in `service.py`. Translate exceptions into `HTTPException` inside `router.py`.
+3. **Type Annotations:** Type-hint all function signatures (arguments and return types). Avoid bare `Any`.
+4. **Explicit Imports:** Use explicit module imports (`from app.modules.users.models import User`) instead of wildcard imports (`from app.modules.users.models import *`).

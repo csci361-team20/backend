@@ -1,12 +1,12 @@
 <h1 align="center">BiletFlow — Backend</h1>
 
-FastAPI + PostgreSQL backend for BiletFlow, a self-service event and ticket management platform (CSCI361 group project).
+> FastAPI + PostgreSQL backend for BiletFlow, a self-service event and ticket management platform (CSCI361 group project).
+>
+> This repo is the backend service only. Frontend and mobile live in separate repos in the organization.
+>
+> **For domain model, roles/permissions, entities, and the ERD, see `docs/ARCHITECTURE.md`.<br>For naming/style/branching rules, see `docs/CONVENTIONS.md`.**
 
-This repo is the backend service only. Frontend and mobile live in separate repos in the organization.
 
-For domain model, roles/permissions, entities, and the ERD, see `docs/ARCHITECTURE.md`. For naming/style/branching rules, see `docs/CONVENTIONS.md`.
-
-***For namings, code-writing practices, commits, PRs you must check CONVENTIONS.md.***
 
 # Tech Stack
 
@@ -27,7 +27,7 @@ For domain model, roles/permissions, entities, and the ERD, see `docs/ARCHITECTU
 
 2. **Clone & open**
    ```bash
-   git clone https://github.com/team22-csci361/backend.git
+   git clone https://github.com/csci361-team20/backend.git
    cd backend
    code .
    ```
@@ -59,6 +59,8 @@ For domain model, roles/permissions, entities, and the ERD, see `docs/ARCHITECTU
 
 ✅ Done. Both containers are running, tables exist, dependencies are installed both locally and in the image. You're ready to code.
 
+
+
 # Daily Workflow
 
 ### 1. Start a branch
@@ -76,8 +78,6 @@ docker compose up
 docker compose up -d
 ```
 Starts `db` and `backend` (backend waits until the db is healthy). That's it — one command.
-
-Swagger docs: `http://localhost:8000/docs`
 
 - **Editing Python code?** **Just save** — `--reload` inside the container picks it up instantly. No restart, no rebuild.
 - **Added/changed a dependency** in `pyproject.toml`/`uv.lock`, or edited the `Dockerfile`? Rebuild the image:
@@ -98,8 +98,7 @@ Swagger docs: `http://localhost:8000/docs`
   *Or you can press* `control C` *shortcut to terminate all processes in terminal.*
 
 ### 3. Made changes to a model or schema?
-**If your change is plain code (no DB), skip this step.**
-
+**If your change is plain code (no DB), skip this step.**<br>
 If your change touches `app/models/` or a module's `models.py`:
 
 1. Edit/add the SQLAlchemy model inside its module (e.g. `app/modules/tickets/models.py`).
@@ -135,6 +134,8 @@ git commit -m "feat(tickets): add seat-hold expiry logic"
 git push origin <your-branch>
 ```
 Open a PR into `main` with a clear description, and wait for CI to pass before merging.
+
+
 
 # Project Structure
 

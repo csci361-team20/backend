@@ -1,33 +1,37 @@
-<h1 align="center">Architecture</h1>
+# 🏔️ Architecture
 
-This document describes the domain model: roles, core entities, relationships, and the reasoning behind key structural decisions. For folder-by-folder codebase layout, see the main [README](../README.md#project-structure).
+This document describes the domain model: roles, core entities, relationships, and the reasoning behind key structural decisions. 
 
-## Roles & Permissions
 
-There are two layers of authorization — don't model this as a single flat `role` field.
 
-### Global roles (on `User`)
+# ❇️ Roles & Permissions
+
+There are two distinct layers of authorization — never model this as a single flat `role` field.
+
+### Global Roles (Stored on `User`)
 
 | Role | Notes |
 |---|---|
-| `user` (default) | Every registered account. Can act as an Attendee — no separate attendee flag needed. |
-| `platform_admin` | Internal staff. Boolean/enum on `User`. Grants access to admin endpoints (moderation, activation review, disputes). |
+| `user` (default) | Every registered account. Acts as an Attendee (no separate attendee flag needed). |
+| `platform_admin` | Internal platform staff. Boolean or enum on `User`. Grants access to admin endpoints (moderation, activation review, disputes). |
 
-### Event-scoped roles (via `StaffAssignment`)
+### Event-Scoped Roles (Stored via `StaffAssignment`)
 
-"Organizer" and "Event Admin" are not user types — they're a relationship between a `User` and a specific `Event`. A user can be `OWNER` on one event and `CHECKIN_STAFF` on another at the same time.
+"Organizer" and "Event Admin" are not fixed user types — they are relationships between a `User` and a specific `Event`. A user can be an `OWNER` on one event and `CHECKIN_STAFF` on another at the same time.
 
 | Role (per event) | Capabilities |
 |---|---|
-| `OWNER` | Created the event. Full control: edit, publish, cancel, activate paid sales, manage staff, refunds. |
-| `MANAGER` | Organizer-invited co-manager. Same as `OWNER` minus destructive/financial actions. |
-| `CHECKIN_STAFF` | The "Event Admin" from the SRS. Mobile app only: scan/verify/check-in for assigned events. |
+| `OWNER` | Created the event. Full control: edit, publish, cancel, activate paid sales, manage staff, manage refunds. |
+| `MANAGER` | Organizer-invited co-manager. Same capabilities as `OWNER` minus destructive/financial actions. |
+| `CHECKIN_STAFF` | The "Event Admin" role. Mobile app only: scan, verify, and check-in attendees for assigned events. |
 
-**Enforcement:** a FastAPI dependency, `require_event_role(event_id, allowed=[...])`, loads the event, checks `StaffAssignment` for `(user_id, event_id)`, and falls back to a `platform_admin` bypass where the SRS allows it. Almost every organizer-facing endpoint depends on this — it's foundational, built early.
+> 📌 **Enforcement:** A FastAPI dependency, `require_event_role(event_id, allowed=[...])`, loads the event, checks `StaffAssignment` for `(user_id, event_id)`, and falls back to a `platform_admin` bypass where permitted.
 
-## Core Entities
 
-Grouped by domain module:
+
+# ❇️ Core Entities
+
+Entities are organized by business module:
 
 - **Identity** — `User`, `OrganizerProfile`, `PayoutAccount`
 - **Events & Venue** — `Event`, `Venue`, `VenueSection`, `Row`, `Seat`, `StaffAssignment`
@@ -35,16 +39,18 @@ Grouped by domain module:
 - **Check-in** — `CheckInRecord`
 - **Support** — `SupportCase`, `SupportMessage`
 - **Promotions** — `PromotionalCampaign`, `PromoCode`, `PromoRedemption`
-- **Platform-wide** — `Notification`, `AuditLog` (append-only, never editable via API)
+- **Platform-wide** — `Notification`, `AuditLog` (append-only logs, never editable via API)
 
-### Invariants to keep in mind when implementing these
+### Invariants & Rules
 
-- A `Ticket`'s QR encodes an opaque/signed token, never the raw DB id — the verification endpoint looks it up server-side.
-- Seat purchase is atomic: `SELECT ... FOR UPDATE` on the seat row inside the order transaction (or a unique constraint on active hold/sold state), so two concurrent checkouts can't win the same seat.
-- Discounts (promo codes, campaign QR codes) are always computed server-side — never trusted from the client.
-- `Ticket.status` transitions are one-way except explicit, authorized reversal (e.g. undoing a check-in), not a generic update endpoint.
+- **QR Tokens:** A `Ticket`'s QR code encodes an opaque, signed token (never the raw database primary key). Verification endpoints look up tokens server-side.
+- **Concurrency:** Seat selection and purchase are atomic. Use `SELECT ... FOR UPDATE` on seat rows inside the order transaction to prevent concurrent checkouts on the same seat.
+- **Discounts:** Discounts (promo codes, campaign links) are always computed server-side and never trusted from client payloads.
+- **State Machine:** `Ticket.status` transitions are strictly one-way, except for explicit, authorized reversals (e.g., undoing a check-in).
 
-## ERD
+
+
+# ❇️ Entity Relationship Diagram (ERD)
 
 ```mermaid
 erDiagram
@@ -252,11 +258,13 @@ erDiagram
     }
 ```
 
-This diagram renders automatically on GitHub. If you edit it, keep this file as the single source of truth — don't let a separate copy drift out of sync.
+> 📌 This diagram renders automatically on GitHub. Keep this file as the single source of truth for schema design.
 
-## Key Design Decisions
 
-- **Modular monolith, not microservices** — one deployable service, internal domain boundaries by folder.
-- **Roles are two-layered** (global + event-scoped) rather than one enum — see [Roles & Permissions](#roles--permissions).
-- **Postgres handles concurrency directly** (row locks, unique constraints on seat state) rather than introducing Redis on day one. Caching can be added later without a redesign if it becomes necessary.
-- **Sync DB URL for Alembic, async for the app** — migrations run once, sequentially, so there's no reason to write async migration scripts; `psycopg2` for Alembic, `asyncpg` for the running app, same Postgres.
+
+# ❇️ Key Design Decisions
+
+- **Modular Monolith Architecture:** Single deployable application with strict internal boundaries separated into domain folders under `app/modules/`.
+- **Two-Layered Role System:** Authorization splits cleanly into global account privileges and per-event staff permissions (see [Roles & Permissions](#roles--permissions)).
+- **Native Postgres Concurrency:** Database row locks and unique constraints handle race conditions natively during seat hold and checkout workflows.
+- **Dual Database Drivers:** Synchronous `psycopg2` driver for Alembic migration scripts; asynchronous `asyncpg` driver for high-performance API query execution.
