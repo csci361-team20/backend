@@ -4,7 +4,7 @@
 >
 > This repo is the backend service only. Frontend and mobile live in separate repos in the organization.
 >
-> **For domain model, roles/permissions, entities, and the ERD, see `docs/ARCHITECTURE.md`.<br>For naming/style/branching rules, see `docs/CONVENTIONS.md`.**
+> **For domain model, roles/permissions, entities, and the ERD, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).<br>For naming/style/branching rules, see [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md).**
 
 
 
