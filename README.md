@@ -44,11 +44,10 @@
 
 5. **Build the images and start everything**
    ```bash
+   # If you want to run this in background mode then add flag -d after command
    docker compose up --build
-
-   # Or if you want to run it in background
-   docker compose up -d --build
    ```
+
    This builds the `backend` image (installs Python deps *into* it) and starts both `db` and `backend`.
 
 6. **Build the database tables**
@@ -70,23 +69,21 @@ git pull origin main
 git checkout -b <your-branch>
 ```
 
-### 2. Run the app
+### 2. Run the ap
 ```bash
+# If you want to run this in background mode then add flag -d after command
 docker compose up
-
-# Or if you want to run it in background
-docker compose up -d
 ```
+
 Starts `db` and `backend` (backend waits until the db is healthy). That's it — one command.
 
 - **Editing Python code?** **Just save** — `--reload` inside the container picks it up instantly. No restart, no rebuild.
 - **Added/changed a dependency** in `pyproject.toml`/`uv.lock`, or edited the `Dockerfile`? Rebuild the image:
-  ```bash
-  docker compose up --build
-  
-  # Or if you want to run it in background
-  docker compose up -d --build
-  ```
+   ```bash
+   # If you want to run this in background mode then add flag -d after command
+   docker compose up --build
+   ```
+
 - **Check logs:**
   ```bash
   docker compose logs -f backend
@@ -112,7 +109,30 @@ If your change touches `app/models/` or a module's `models.py`:
    docker compose exec backend alembic upgrade head
    ```
 
-**You must run both of these commands while Docker is working; to do that — add another terminal and run it.**
+---
+
+*Optional: We can check the existence of tables using `psql`:*
+
+```bash
+# Display table's metadata
+docker compose exec db psql -U <username> -d <password> -c "\d <table-name>"
+# Display table's actual content:
+docker compose exec db psql -U <username> -d <password> -c "SELECT * FROM <table-name>;"
+```
+
+> 🌭 `<username>` and `<table-name>` are usually in `.env` or `.env.example`, but in our project we use `biletflow` for both of them, so you can just use these commands:
+
+   ```bash
+   # Metadata
+   docker compose exec db psql -U biletflow -d biletflow -c "\d <table-name>"
+   ```
+
+   ```bash
+   # Content
+   docker compose exec db psql -U biletflow -d biletflow -c "SELECT * FROM <table-name>;"
+   ```
+
+> All commands type of `docker compose exec` must be run while docker is running. To do that in parallel, you have to open new terminal and run in there. 
 
 ### 4. Quality checks (always, before committing)
 These run locally against your `.venv` from `uv sync` — no Docker needed, much faster:
