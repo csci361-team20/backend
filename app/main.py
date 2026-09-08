@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.modules.users.router import router as users_router
+from app.api.v1.router import router as router_v1
 
 app = FastAPI(title="BiletFlow API")
-app.include_router(users_router)
+app.include_router(router_v1)
