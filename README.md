@@ -69,7 +69,7 @@ git pull origin main
 git checkout -b <your-branch>
 ```
 
-### 2. Run the ap
+### 2. Run the app
 ```bash
 # If you want to run this in background mode then add flag -d after command
 docker compose up
@@ -134,7 +134,13 @@ docker compose exec db psql -U <username> -d <password> -c "SELECT * FROM <table
 
 > All commands type of `docker compose exec` must be run while docker is running. To do that in parallel, you have to open new terminal and run in there. 
 
-### 4. Quality checks (always, before committing)
+### 4. Added new route?
+All routes must be gone through `app/api/v1/router.py` so when new route is added you must include it in there **not** in `main.py`. The schema of the work looks like this:
+```bash
+app/modules/*/router.py -> app/api/v1/router.py -> app/main.py
+```
+
+### 5. Quality checks (always, before committing)
 These run locally against your `.venv` from `uv sync` — no Docker needed, much faster:
 ```bash
 uv run ruff format .         # auto-format
@@ -143,13 +149,13 @@ uv run ruff check .          # must report "All checks passed!"
 uv run pytest                # tests must pass
 ```
 
-### 5. Commit
+### 6. Commit
 ```bash
 git add .
 git commit -m "feat(tickets): add seat-hold expiry logic"
 ```
 
-### 6. Push & open a PR
+### 7. Push & open a PR
 ```bash
 git push origin <your-branch>
 ```
