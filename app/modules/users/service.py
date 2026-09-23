@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,3 +36,16 @@ async def get_all_users_from_db(db: AsyncSession):
     query = select(User)
     result = await db.execute(query)
     return result.scalars().all()
+
+
+async def get_user_from_db_by_id(id: UUID, db: AsyncSession) -> User:
+    query = select(User).where(User.id == id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    return user
