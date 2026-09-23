@@ -21,11 +21,12 @@ class User(Base):
 
     is_platform_admin: Mapped[bool] = mapped_column(default=False, nullable=False)
 
-    is_verified: Mapped[bool] = mapped_column(default=False, nullable=False)
-    email_verified_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    # is_verified: Mapped[bool] = mapped_column(default=False, nullable=False)
+    # email_verified_at: Mapped[datetime | None] = mapped_column(
+    #     DateTime(timezone=True), nullable=True
+    # )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
