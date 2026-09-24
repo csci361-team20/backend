@@ -20,6 +20,7 @@ async def test_get_users():
     assert response.status_code == 200
     assert response.json() == {"1": "neo"}
 
+
 @pytest.mark.anyio
 async def test_unknown_users_route_returns_404():
     async with AsyncClient(
