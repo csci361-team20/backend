@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.users.models import User
 from app.modules.users.schemas import UserCreate
 
-
 password_hash = PasswordHash.recommended()
 
 
