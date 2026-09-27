@@ -1,8 +1,6 @@
 from fastapi import APIRouter
 
+from app.modules.users.router import router as user_router
+
 router = APIRouter(prefix="/api/v1")
-
-
-@router.get("/")
-def root():
-    return {"system": "on"}
+router.include_router(user_router)
