@@ -10,6 +10,25 @@ jobs:
   lint-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: biletflow
+          POSTGRES_PASSWORD: biletflowpassword
+          POSTGRES_DB: biletflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U biletflow -d biletflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://biletflow:biletflowpassword@localhost:5432/biletflow
+      ORIGINS: '["*"]'
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
