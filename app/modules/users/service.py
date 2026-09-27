@@ -1,11 +1,15 @@
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
 from app.modules.users.schemas import UserCreate
+
+
+password_hash = PasswordHash.recommended()
 
 
 async def add_new_user_to_db(db: AsyncSession, user_in: UserCreate) -> User:
@@ -22,9 +26,9 @@ async def add_new_user_to_db(db: AsyncSession, user_in: UserCreate) -> User:
     user_data = user_in.model_dump()
     raw_password = user_data.pop("password")
 
-    password_hash = raw_password
+    hashed_password = password_hash.hash(raw_password)
 
-    user = User(**user_data, password_hash=password_hash)
+    user = User(**user_data, password_hash=hashed_password)
     db.add(user)
     await db.commit()
     await db.refresh(user)
@@ -32,10 +36,10 @@ async def add_new_user_to_db(db: AsyncSession, user_in: UserCreate) -> User:
     return user
 
 
-async def get_all_users_from_db(db: AsyncSession):
+async def get_all_users_from_db(db: AsyncSession) -> list[User]:
     query = select(User)
     result = await db.execute(query)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def get_user_from_db_by_id(id: UUID, db: AsyncSession) -> User:
