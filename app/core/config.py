@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     ORIGINS: list[str]
+    SECRET_KEY: str
 
     @property
     def sync_database_url(self) -> str:
