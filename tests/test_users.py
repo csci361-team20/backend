@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -11,19 +13,32 @@ async def test_users_router_exists():
 
 @pytest.mark.anyio
 async def test_get_users():
+    email = f"test-{uuid4().hex}@example.com"
+
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
     ) as client:
+        create_response = await client.post(
+            "/api/v1/users/",
+            json={
+                "email": email,
+                "full_name": "Test User",
+                "password": "testpassword123",
+            },
+        )
+
+        assert create_response.status_code == 200, create_response.text
+
         response = await client.get("/api/v1/users/")
 
     assert response.status_code == 200
 
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) >= 1
-    assert data[0]["email"] == "test@example.com"
-    assert data[0]["full_name"] == "Test User"
+    assert any(
+        user["email"] == email and user["full_name"] == "Test User" for user in data
+    )
 
 
 @pytest.mark.anyio
