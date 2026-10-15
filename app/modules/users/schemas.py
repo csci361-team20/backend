@@ -33,3 +33,7 @@ class UserResponse(UserBase):
 
     id: uuid.UUID
     created_at: datetime
+
+
+class UserUpdate(BaseModel):
+    full_name: str | None = Field(None, min_length=2, max_length=100)
