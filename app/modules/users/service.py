@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import hash_password
 from app.modules.users.models import User
 from app.modules.users.schemas import UserCreate
 
@@ -22,7 +23,7 @@ async def add_new_user_to_db(db: AsyncSession, user_in: UserCreate) -> User:
     user_data = user_in.model_dump()
     raw_password = user_data.pop("password")
 
-    password_hash = raw_password
+    password_hash = hash_password(raw_password)
 
     user = User(**user_data, password_hash=password_hash)
     db.add(user)
