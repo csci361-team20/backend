@@ -18,7 +18,6 @@ from app.modules.events.enums import (
     EventStatus,
     EventVisibility,
     SeatingType,
-    StaffRole,
 )
 
 
