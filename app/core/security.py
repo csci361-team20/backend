@@ -26,9 +26,7 @@ def generate_qr_token() -> str:
 
 def create_access_token(subject: str) -> str:
     """Create a JWT for the given subject (we'll pass the user's id)."""
-    expire = datetime.now(UTC) + timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": subject, "exp": expire}
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
