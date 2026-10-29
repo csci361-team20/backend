@@ -1,54 +1,41 @@
+
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from pwdlib import PasswordHash
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import hash_password
+from app.modules.users import crud
 from app.modules.users.models import User
-from app.modules.users.schemas import UserCreate
-
-password_hash = PasswordHash.recommended()
+from app.modules.users.schemas import UserCreate, UserUpdate
 
 
 async def add_new_user_to_db(db: AsyncSession, user_in: UserCreate) -> User:
-    query = select(User).where(User.email == user_in.email)
-    result = await db.execute(query)
-    existing_user = result.scalar_one_or_none()
-
-    if existing_user:
+    if await crud.get_by_email(db, user_in.email):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists",
+            status.HTTP_400_BAD_REQUEST, detail="User with this email already exists"
         )
-
-    user_data = user_in.model_dump()
-    raw_password = user_data.pop("password")
-
-    hashed_password = password_hash.hash(raw_password)
-
-    user = User(**user_data, password_hash=hashed_password)
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-
-    return user
+    return await crud.create(
+        db, user_in.email, user_in.full_name, hash_password(user_in.password)
+    )
 
 
 async def get_all_users_from_db(db: AsyncSession) -> list[User]:
-    query = select(User)
-    result = await db.execute(query)
-    return list(result.scalars().all())
+    return await crud.get_all(db)
 
 
-async def get_user_from_db_by_id(id: UUID, db: AsyncSession) -> User:
-    query = select(User).where(User.id == id)
-    result = await db.execute(query)
-    user = result.scalar_one_or_none()
-
+async def get_user_from_db_by_id(db: AsyncSession, id: UUID) -> User:
+    user = await crud.get_by_id(db, id)
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
-
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
     return user
+
+
+async def update_user_in_db(db: AsyncSession, id: UUID, user_in: UserUpdate) -> User:
+    user = await get_user_from_db_by_id(db, id)
+    return await crud.update(db, user, user_in.model_dump(exclude_unset=True))
+
+
+async def delete_user_in_db(db: AsyncSession, id: UUID) -> None:
+    user = await get_user_from_db_by_id(db, id)
+    await crud.delete(db, user)

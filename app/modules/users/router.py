@@ -1,10 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 
 from app.api.deps import DatabaseSession
 from app.modules.users import service as user_service
-from app.modules.users.schemas import UserCreate, UserResponse
+from app.modules.users.schemas import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -16,7 +16,7 @@ async def get_all_users(db: DatabaseSession):
 
 @router.get("/{id}", response_model=UserResponse)
 async def get_user_by_id(id: UUID, db: DatabaseSession):
-    return await user_service.get_user_from_db_by_id(id=id, db=db)
+    return await user_service.get_user_from_db_by_id(db=db, id=id)
 
 
 @router.post("/", response_model=UserResponse)
@@ -25,10 +25,10 @@ async def create_user(user_in: UserCreate, db: DatabaseSession):
 
 
 @router.patch("/{id}", response_model=UserResponse)
-async def update_user(id: UUID, user_in: UserCreate, db: DatabaseSession):
-    pass
+async def update_user(id: UUID, user_in: UserUpdate, db: DatabaseSession):
+    return await user_service.update_user_in_db(db=db, id=id, user_in=user_in)
 
 
-@router.delete("/{id}", response_model=UserResponse)
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(id: UUID, db: DatabaseSession):
-    pass
+    await user_service.delete_user_from_db(db=db, id=id)
