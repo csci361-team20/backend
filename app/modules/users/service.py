@@ -35,6 +35,6 @@ async def update_user_in_db(db: AsyncSession, id: UUID, user_in: UserUpdate) -> 
     return await crud.update(db, user, user_in.model_dump(exclude_unset=True))
 
 
-async def delete_user_from_db(db: AsyncSession, id: UUID) -> None:
+async def delete_user_in_db(db: AsyncSession, id: UUID) -> None:
     user = await get_user_from_db_by_id(db, id)
     await crud.delete(db, user)
