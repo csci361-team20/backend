@@ -9,6 +9,7 @@ from app.modules.events.models import Event
 from app.modules.tickets import crud
 from app.modules.tickets.models import TicketType
 from app.modules.tickets.schemas import TicketTypeCreate, TicketTypeUpdate
+from app.modules.users.models import User
 
 _REQUIRED_FIELDS = ("name", "price_kzt", "quantity", "max_per_order", "is_hidden")
 
@@ -34,33 +35,39 @@ async def _ensure_within_capacity(
 
 
 async def create_ticket_type(
-    db: AsyncSession, event_id: UUID, data_in: TicketTypeCreate
+    db: AsyncSession, user: User, event_id: UUID, data_in: TicketTypeCreate
 ) -> TicketType:
     event = await event_service.get_event(db, event_id)
+    await event_service.ensure_event_role(db, event, user)
     _ensure_event_editable(event)
     await _ensure_within_capacity(db, event, data_in.quantity)
     return await crud.create(db, {**data_in.model_dump(), "event_id": event_id})
 
 
-async def get_ticket_type(db: AsyncSession, id: UUID) -> TicketType:
-    ticket_type = await crud.get_by_id(db, id)
-    if ticket_type is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket type not found")
-    return ticket_type
-
-
 async def get_event_ticket_types(
-    db: AsyncSession, event_id: UUID, include_hidden: bool = False
+    db: AsyncSession,
+    event_id: UUID,
+    user: User | None,
+    include_hidden: bool = False,
 ) -> list[TicketType]:
-    await event_service.get_event(db, event_id)
+    event = await event_service.get_event_for_viewer(db, event_id, user)
+    if include_hidden:
+        if user is None:
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED,
+                "Authentication required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        await event_service.ensure_event_role(db, event, user)
     return await crud.get_by_event(db, event_id, include_hidden)
 
 
 async def update_ticket_type(
-    db: AsyncSession, id: UUID, data_in: TicketTypeUpdate
+    db: AsyncSession, user: User, id: UUID, data_in: TicketTypeUpdate
 ) -> TicketType:
     ticket_type = await get_ticket_type(db, id)
     event = await event_service.get_event(db, ticket_type.event_id)
+    await event_service.ensure_event_role(db, event, user)
     _ensure_event_editable(event)
 
     data = data_in.model_dump(exclude_unset=True)
@@ -80,3 +87,10 @@ async def update_ticket_type(
         await _ensure_within_capacity(db, event, data["quantity"], exclude_id=id)
 
     return await crud.update(db, ticket_type, data)
+
+
+async def get_ticket_type(db: AsyncSession, id: UUID) -> TicketType:
+    ticket_type = await crud.get_by_id(db, id)
+    if ticket_type is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket type not found")
+    return ticket_type

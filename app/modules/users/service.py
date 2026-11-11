@@ -9,6 +9,13 @@ from app.modules.users.models import User
 from app.modules.users.schemas import UserCreate, UserUpdate
 
 
+def _ensure_self_or_admin(current_user: User, target_id: UUID) -> None:
+    if current_user.id != target_id and not current_user.is_platform_admin:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "You can only manage your own account"
+        )
+
+
 async def add_new_user_to_db(db: AsyncSession, user_in: UserCreate) -> User:
     if await crud.get_by_email(db, user_in.email):
         raise HTTPException(
@@ -30,11 +37,16 @@ async def get_user_from_db_by_id(db: AsyncSession, id: UUID) -> User:
     return user
 
 
-async def update_user_in_db(db: AsyncSession, id: UUID, user_in: UserUpdate) -> User:
+async def update_user_in_db(
+    db: AsyncSession, current_user: User, id: UUID, user_in: UserUpdate
+) -> User:
+    _ensure_self_or_admin(current_user, id)
     user = await get_user_from_db_by_id(db, id)
-    return await crud.update(db, user, user_in.model_dump(exclude_unset=True))
+    data = user_in.model_dump(exclude_unset=True, exclude_none=True)
+    return await crud.update(db, user, data)
 
 
-async def delete_user_in_db(db: AsyncSession, id: UUID) -> None:
+async def delete_user_from_db(db: AsyncSession, current_user: User, id: UUID) -> None:
+    _ensure_self_or_admin(current_user, id)
     user = await get_user_from_db_by_id(db, id)
     await crud.delete(db, user)

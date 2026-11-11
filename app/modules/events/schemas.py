@@ -13,8 +13,6 @@ from app.modules.events.enums import EventStatus, EventVisibility, SeatingType
 
 
 class EventCreate(BaseModel):
-    # TODO: derive from the current user once JWT lands
-    organizer_profile_id: uuid.UUID
     title: str = Field(..., min_length=3, max_length=255)
     description: str | None = None
     visibility: EventVisibility = EventVisibility.PUBLIC

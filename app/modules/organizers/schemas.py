@@ -11,12 +11,15 @@ class VerificationStatus(StrEnum):
 
 
 class OrganizerProfileCreate(BaseModel):
-    display_name: str = Field(..., min_length=2, max_length=255)
+    display_name: str | None = Field(None, min_length=2, max_length=255)
 
 
 class OrganizerProfileUpdate(BaseModel):
     display_name: str | None = Field(None, min_length=2, max_length=255)
-    verification_status: VerificationStatus | None = None
+
+
+class OrganizerVerificationUpdate(BaseModel):
+    verification_status: VerificationStatus
 
 
 class OrganizerProfileResponse(BaseModel):
