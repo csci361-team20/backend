@@ -37,3 +37,20 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
+
+oauth2_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+
+
+async def get_optional_user(
+    token: Annotated[str | None, Depends(oauth2_optional)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User | None:
+    if token is None:
+        return None
+    try:
+        return await get_current_user(token, db)
+    except HTTPException:
+        return None
+
+
+OptionalUser = Annotated[User | None, Depends(get_optional_user)]

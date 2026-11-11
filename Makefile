@@ -5,6 +5,8 @@ COMPOSE := docker compose
 EXEC    := $(COMPOSE) exec backend
 DB_USER := biletflow
 DB_NAME := biletflow
+DB_PASS := biletflowpassword
+LOCAL_DB_URL := postgresql+asyncpg://$(DB_USER):$(DB_PASS)@localhost:5433/$(DB_NAME)
 API_URL := http://localhost:8000
 
 .PHONY: help up dev down restart rebuild nuke reset-db ps logs logs-db shell psql tables docs \
@@ -105,8 +107,8 @@ lint: ## Check formatting and lint without changing files (same as CI)
 	uv run ruff format --check .
 	uv run ruff check .
 
-test: ## Run pytest
-	uv run pytest
+test: ## Run pytest against the Docker database (run `make up` first)
+	DATABASE_URL=$(LOCAL_DB_URL) uv run pytest
 
 check: fmt test ## Format, fix, then test (run before every commit)
 

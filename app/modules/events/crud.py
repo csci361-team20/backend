@@ -49,3 +49,26 @@ async def update(db: AsyncSession, event: Event, data: dict) -> Event:
     await db.commit()
     await db.refresh(event)
     return event
+
+
+async def get_staff_role(db: AsyncSession, event_id: UUID, user_id: UUID) -> str | None:
+    result = await db.execute(
+        select(StaffAssignment.role).where(
+            StaffAssignment.event_id == event_id,
+            StaffAssignment.user_id == user_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_managed_by_user(db: AsyncSession, user_id: UUID) -> list[Event]:
+    result = await db.execute(
+        select(Event)
+        .join(StaffAssignment, StaffAssignment.event_id == Event.id)
+        .where(
+            StaffAssignment.user_id == user_id,
+            StaffAssignment.role.in_([StaffRole.OWNER, StaffRole.MANAGER]),
+        )
+        .order_by(Event.start_at.desc())
+    )
+    return list(result.scalars().all())

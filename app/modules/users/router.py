@@ -30,10 +30,14 @@ async def create_user(user_in: UserCreate, db: DatabaseSession):
 
 
 @router.patch("/{id}", response_model=UserResponse)
-async def update_user(id: UUID, user_in: UserUpdate, db: DatabaseSession):
-    return await user_service.update_user_in_db(db=db, id=id, user_in=user_in)
+async def update_user(
+    id: UUID, user_in: UserUpdate, user: CurrentUser, db: DatabaseSession
+):
+    return await user_service.update_user_in_db(
+        db=db, current_user=user, id=id, user_in=user_in
+    )
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(id: UUID, db: DatabaseSession):
-    await user_service.delete_user_from_db(db=db, id=id)
+async def delete_user(id: UUID, user: CurrentUser, db: DatabaseSession):
+    await user_service.delete_user_from_db(db=db, current_user=user, id=id)
