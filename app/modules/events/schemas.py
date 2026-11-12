@@ -1,3 +1,4 @@
+
 import uuid
 from datetime import datetime
 
@@ -6,6 +7,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    field_validator,
     model_validator,
 )
 
@@ -25,6 +27,15 @@ class EventCreate(BaseModel):
     city: str | None = Field(None, max_length=100)
     category: str | None = Field(None, max_length=50)
 
+    @field_validator("title", mode="before")
+    @classmethod
+    def validate_title(cls, value):
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise ValueError("Title cannot be empty")
+        return value
+
     @model_validator(mode="after")
     def validate_dates(self) -> "EventCreate":
         if self.end_at <= self.start_at:
@@ -43,6 +54,15 @@ class EventUpdate(BaseModel):
     venue_address: str | None = Field(None, max_length=500)
     city: str | None = Field(None, max_length=100)
     category: str | None = Field(None, max_length=50)
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def validate_title(cls, value):
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise ValueError("Title cannot be empty")
+        return value
 
 
 class EventResponse(BaseModel):
