@@ -14,7 +14,9 @@ class Settings(BaseSettings):
 
     @property
     def sync_database_url(self) -> str:
-        return self.DATABASE_URL.replace("postgresql+asyncpg", "postgresql+psycopg2")
+        return self.DATABASE_URL.replace(
+            "postgresql+asyncpg", "postgresql+psycopg2"
+        ).replace("ssl=require", "sslmode=require")
 
 
 settings = Settings()
