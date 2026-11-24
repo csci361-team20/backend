@@ -27,7 +27,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql+asyncpg://biletflow:biletflowpassword@localhost:5432/biletflow
-      ORIGINS: '["*"]'
+      ORIGINS: '["http://localhost:3000"]'
 
     steps:
       - name: Check out repository
