@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from enum import StrEnum
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
@@ -32,6 +33,14 @@ class TicketTypeUpdate(BaseModel):
     is_hidden: bool | None = None
 
 
+class SaleStatus(StrEnum):
+    HIDDEN = "hidden"
+    SCHEDULED = "scheduled"
+    ON_SALE = "on_sale"
+    SOLD_OUT = "sold_out"
+    ENDED = "ended"
+
+
 class TicketTypeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -45,4 +54,32 @@ class TicketTypeResponse(BaseModel):
     sale_start: datetime | None
     sale_end: datetime | None
     is_hidden: bool
+    seat_category: str | None = None
     created_at: datetime
+    available: int
+    sale_status: SaleStatus
+
+
+class TicketTypeStats(TicketTypeResponse):
+    """Staff view: the full breakdown behind ``available`` (SRS 4.3)."""
+
+    sold: int
+    reserved: int
+    refunded: int
+    checked_in: int
+
+
+class TicketStatsTotals(BaseModel):
+    quantity: int
+    available: int
+    sold: int
+    reserved: int
+    refunded: int
+    checked_in: int
+
+
+class EventTicketStats(BaseModel):
+    event_id: uuid.UUID
+    capacity: int
+    ticket_types: list[TicketTypeStats]
+    totals: TicketStatsTotals

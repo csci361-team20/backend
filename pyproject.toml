@@ -16,6 +16,10 @@ dependencies = [
     "bcrypt>=5.0.0",
     "pyjwt>=2.15.1",
     "greenlet>=3.5.5",
+    "tzdata>=2026.6",
+    "reportlab>=5.1.0",
+    "boto3>=1.44.1",
+    "qrcode[pil]>=8.2",
 ]
 
 [dependency-groups]
@@ -35,3 +39,7 @@ ignore = []
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff.lint.per-file-ignores]
+# Translation catalog: long human-readable strings are clearer unwrapped
+"app/core/i18n.py" = ["E501"]

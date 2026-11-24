@@ -29,9 +29,36 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://biletflow:biletflowpassword@db:5432/biletflow
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  # Catches every email the backend sends. Inbox UI: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: biletflow_mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  # Optional S3-compatible storage (SeaweedFS): docker compose --profile storage up
+  # S3 API on http://localhost:8333; local dev only, no credentials required.
+  # Use with STORAGE_BACKEND=s3 S3_ENDPOINT_URL=http://localhost:8333
+  s3:
+    image: chrislusf/seaweedfs:4.53
+    container_name: biletflow_s3
+    profiles: ["storage"]
+    command: server -s3 -dir=/data
+    ports:
+      - "8333:8333"
+    volumes:
+      - s3data:/data
 
 volumes:
   pgdata:
+  s3data:
