@@ -19,9 +19,14 @@ async def get_by_user_id(db: AsyncSession, user_id: UUID) -> OrganizerProfile | 
 
 
 async def create(
-    db: AsyncSession, user_id: UUID, display_name: str
+    db: AsyncSession,
+    user_id: UUID,
+    display_name: str,
+    contact: dict | None = None,
 ) -> OrganizerProfile:
-    profile = OrganizerProfile(user_id=user_id, display_name=display_name)
+    profile = OrganizerProfile(
+        user_id=user_id, display_name=display_name, **(contact or {})
+    )
     db.add(profile)
     await db.commit()
     await db.refresh(profile)

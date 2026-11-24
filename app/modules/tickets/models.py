@@ -29,6 +29,8 @@ class TicketType(Base):
         DateTime(timezone=True), nullable=True
     )
     is_hidden: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Assigned seating: seats of this layout category are sold as this type
+    seat_category: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

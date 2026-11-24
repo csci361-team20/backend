@@ -1,4 +1,9 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
+
+# DejaVu fonts print Kazakh and Russian names on PDF tickets
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir uv
 
